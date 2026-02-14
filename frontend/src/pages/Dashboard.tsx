@@ -63,15 +63,26 @@ export default function Dashboard() {
                         </div>
 
                         {isRecruiter ? (
-                            <button
-                                onClick={() => navigate("/scan")}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-white text-black rounded-xl text-sm font-semibold hover:bg-gray-200 transition-all shadow-lg shadow-white/5 active:scale-95 cursor-pointer"
-                            >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                </svg>
-                                Add Candidate
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => navigate("/compare")}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-white/[0.05] border border-white/10 text-white rounded-xl text-sm font-semibold hover:bg-white/10 transition-all active:scale-95 cursor-pointer"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                                    </svg>
+                                    Compare
+                                </button>
+                                <button
+                                    onClick={() => navigate("/scan")}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-white text-black rounded-xl text-sm font-semibold hover:bg-gray-200 transition-all shadow-lg shadow-white/5 active:scale-95 cursor-pointer"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                                    </svg>
+                                    Add Candidate
+                                </button>
+                            </div>
                         ) : null}
                     </div>
 

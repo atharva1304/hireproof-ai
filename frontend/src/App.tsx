@@ -7,6 +7,7 @@ import CandidateReport from "./pages/CandidateReport";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import CandidateHome from "./pages/CandidateHome";
+import CompareCandidates from "./pages/CompareCandidates";
 import AuthGuard from "./components/AuthGuard";
 import { getAuthSession } from "./lib/session";
 import AuthCallback from "./pages/AuthCallback";
@@ -230,6 +231,14 @@ export default function App() {
           element={
             <AuthGuard allowedRoles={["recruiter", "candidate"]}>
               <CandidateReport />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/compare"
+          element={
+            <AuthGuard allowedRoles={["recruiter"]}>
+              <CompareCandidates />
             </AuthGuard>
           }
         />
