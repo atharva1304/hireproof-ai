@@ -15,12 +15,16 @@ export default function AuthCallback() {
 
         if (!session?.user?.email) {
           clearAuthSession();
-          navigate("/recruiter/login", { replace: true });
+          navigate("/", { replace: true });
           return;
         }
 
-        const intendedRoleRaw = localStorage.getItem("oauthRole");
-        const role: AuthRole = intendedRoleRaw === "candidate" ? "candidate" : "recruiter";
+        // Read role stored BEFORE OAuth redirect
+        const storedRole = localStorage.getItem("hireproof_role") || localStorage.getItem("oauthRole");
+        const role: AuthRole = storedRole === "candidate" ? "candidate" : "recruiter";
+
+        // Clean up both keys
+        localStorage.removeItem("hireproof_role");
         localStorage.removeItem("oauthRole");
 
         const oauthExchange = await fetch(`${API}/api/auth/oauth/login`, {
@@ -35,28 +39,38 @@ export default function AuthCallback() {
 
         if (!oauthExchange.ok) {
           clearAuthSession();
-          navigate("/recruiter/login", { replace: true });
+          navigate("/", { replace: true });
           return;
         }
 
         const payload = await oauthExchange.json();
         setAuthSession({
           token: payload.token,
-          role: payload.user.role,
-          user: payload.user,
+          role,           // use the role WE chose, not the backend's
+          user: { ...payload.user, role },
         });
 
-        navigate(payload.user.role === "candidate" ? "/candidate/dashboard" : "/recruiter/dashboard", {
-          replace: true,
-        });
+        // Role-based redirect
+        if (role === "candidate") {
+          navigate("/candidate/home", { replace: true });
+        } else {
+          navigate("/recruiter/dashboard", { replace: true });
+        }
       } catch {
         clearAuthSession();
-        navigate("/recruiter/login", { replace: true });
+        navigate("/", { replace: true });
       }
     };
 
     handleAuthCallback();
   }, [navigate]);
 
-  return <div className="min-h-screen grid place-items-center text-white/80 bg-[#0a0a0f]">Completing sign in...</div>;
+  return (
+    <div className="min-h-screen grid place-items-center bg-[#0a0a0f]">
+      <div className="text-center space-y-4">
+        <div className="w-10 h-10 border-3 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mx-auto" />
+        <p className="text-white/60 text-sm">Completing sign in...</p>
+      </div>
+    </div>
+  );
 }

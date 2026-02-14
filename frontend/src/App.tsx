@@ -6,6 +6,7 @@ import CandidateScan from "./pages/CandidateScan";
 import CandidateReport from "./pages/CandidateReport";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
+import CandidateHome from "./pages/CandidateHome";
 import AuthGuard from "./components/AuthGuard";
 import { getAuthSession } from "./lib/session";
 import AuthCallback from "./pages/AuthCallback";
@@ -33,7 +34,7 @@ function LandingPage() {
       {/* Hero Section */}
       <section className="px-10 py-20 text-center">
         <h2 className="text-5xl font-extrabold leading-tight">
-          Stop Fake Skills.  
+          Stop Fake Skills.
           <span className="text-indigo-600"> Hire with Proof.</span>
         </h2>
         <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto">
@@ -42,13 +43,13 @@ function LandingPage() {
         </p>
 
         <div className="mt-10 flex justify-center gap-6">
-          <a 
+          <a
             href="/candidate/login"
             className="px-6 py-3 text-lg text-white bg-emerald-600 rounded-xl hover:bg-emerald-700 transition"
           >
             Login as Candidate
           </a>
-          <a 
+          <a
             href="/recruiter/login"
             className="px-6 py-3 text-lg border-2 border-indigo-600 text-indigo-600 rounded-xl hover:bg-indigo-50 transition"
           >
@@ -187,7 +188,7 @@ export default function App() {
           path="/dashboard"
           element={
             <Navigate
-              to={session?.role === "candidate" ? "/candidate/dashboard" : "/recruiter/dashboard"}
+              to={session?.role === "candidate" ? "/candidate/home" : "/recruiter/dashboard"}
               replace
             />
           }
@@ -205,6 +206,14 @@ export default function App() {
           element={
             <AuthGuard allowedRoles={["candidate"]}>
               <Dashboard />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/candidate/home"
+          element={
+            <AuthGuard allowedRoles={["candidate"]}>
+              <CandidateHome />
             </AuthGuard>
           }
         />
