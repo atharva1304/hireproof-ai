@@ -4,6 +4,7 @@ import type { Candidate } from "../types/candidate";
 import { getMockCandidate } from "../lib/mockData";
 import CandidateSelector from "../components/compare/CandidateSelector";
 import CandidateComparisonCard from "../components/compare/CandidateComparisonCard";
+import ComparisonAIRecommendation from "../components/compare/ComparisonAIRecommendation";
 
 export default function CompareCandidates() {
     const navigate = useNavigate();
@@ -75,18 +76,7 @@ export default function CompareCandidates() {
     const candidateA = candidates.find((c) => c.id === selectedA) ?? null;
     const candidateB = candidates.find((c) => c.id === selectedB) ?? null;
 
-    // Recommendation logic
-    let recommendation: string | null = null;
-    if (candidateA && candidateB) {
-        const diff = Math.abs(candidateA.score - candidateB.score);
-        if (diff <= 10) {
-            recommendation = "Both candidates are close in score — interview recommended for both.";
-        } else if (candidateA.score > candidateB.score) {
-            recommendation = `${candidateA.name} is the recommended hire with a higher authenticity score.`;
-        } else {
-            recommendation = `${candidateB.name} is the recommended hire with a higher authenticity score.`;
-        }
-    }
+    // Winner logic for card highlighting
 
     const winnerA = candidateA && candidateB ? candidateA.score > candidateB.score && Math.abs(candidateA.score - candidateB.score) > 10 : false;
     const winnerB = candidateA && candidateB ? candidateB.score > candidateA.score && Math.abs(candidateA.score - candidateB.score) > 10 : false;
@@ -163,18 +153,8 @@ export default function CompareCandidates() {
                             <CandidateComparisonCard candidate={candidateB} isWinner={winnerB} />
                         </div>
 
-                        {/* Recommendation */}
-                        {recommendation && (
-                            <div className="bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 text-center shadow-2xl shadow-black/20">
-                                <div className="flex items-center justify-center gap-2 mb-2">
-                                    <svg className="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-                                    </svg>
-                                    <h3 className="text-lg font-semibold text-white">AI Recommendation</h3>
-                                </div>
-                                <p className="text-white/60 text-sm">{recommendation}</p>
-                            </div>
-                        )}
+                        {/* AI Hiring Recommendation */}
+                        <ComparisonAIRecommendation candidateA={candidateA} candidateB={candidateB} />
                     </>
                 ) : (
                     <div className="flex flex-col items-center justify-center py-20 border border-dashed border-white/[0.08] rounded-2xl bg-white/[0.01]">
