@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { supabase } from '../lib/supabase';
-
+import { API } from '../lib/api';
 
 export const RecruiterLogin = () => {
   const [email, setEmail] = useState('');
@@ -12,19 +11,26 @@ export const RecruiterLogin = () => {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const handleGoogleLogin = async () => {
     try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !supabaseAnonKey) {
+        setErrors({ email: 'Google login requires VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.' });
+        return;
+      }
+
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: 'http://localhost:5173/auth/callback',
-        },
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
-  
+
       if (error) {
-        console.error(error);
-        alert(error.message);
+        setErrors({ email: error.message });
       }
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      setErrors({ email: 'Install @supabase/supabase-js to enable Google login.' });
     }
   };
   
@@ -56,8 +62,7 @@ export const RecruiterLogin = () => {
     setIsLoading(true);
     
     try {
-      // TODO: Replace with actual API call
-      const response = await fetch('http://127.0.0.1:5000/api/auth/recruiter/login', {
+      const response = await fetch(`${API}/api/auth/recruiter/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, rememberMe }),
@@ -69,7 +74,8 @@ export const RecruiterLogin = () => {
         localStorage.setItem('recruiterToken', data.token);
         window.location.href = '/recruiter/dashboard';
       } else {
-        setErrors({ email: 'Invalid email or password' });
+        const payload = await response.json().catch(() => null);
+        setErrors({ email: payload?.error || 'Invalid email or password' });
       }
     } catch (error) {
       console.error('Login failed:', error);

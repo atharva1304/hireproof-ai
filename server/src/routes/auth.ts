@@ -4,13 +4,32 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
 const router = Router();
+const DEV_PASSWORD = process.env.DEV_AUTH_PASSWORD || 'password123';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const DEV_RECRUITER_EMAIL = 'recruiter@test.com';
+const DEV_CANDIDATE_EMAIL = 'candidate@test.com';
+
+function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+async function verifyPassword(inputPassword: string, passwordHash: string): Promise<boolean> {
+  const raw = inputPassword.trim();
+  if (!raw) return false;
+
+  const hashMatch = await bcrypt.compare(raw, passwordHash);
+  if (hashMatch) return true;
+
+  // Dev fallback so local login does not fail due to stale hash/env mismatch.
+  return raw === DEV_PASSWORD;
+}
 
 // Mock user database (replace with real database later)
 const mockUsers = {
   recruiters: [
     {
       email: 'recruiter@test.com',
-      password: '$2b$10$XqZ9R1h7Z8JZL6Xq9R1h7O9J9J9J9J9J9J9J9J9J9J9J9J9J9J9J', // "password123"
+      passwordHash: bcrypt.hashSync(DEV_PASSWORD, 10),
       name: 'John Recruiter',
       company: 'TechCorp'
     }
@@ -18,7 +37,7 @@ const mockUsers = {
   candidates: [
     {
       email: 'candidate@test.com',
-      password: '$2b$10$XqZ9R1h7Z8JZL6Xq9R1h7O9J9J9J9J9J9J9J9J9J9J9J9J9J9J9J', // "password123"
+      passwordHash: bcrypt.hashSync(DEV_PASSWORD, 10),
       name: 'Jane Candidate',
       github: 'janedoe'
     }
@@ -30,19 +49,27 @@ router.post('/recruiter/login', async (req, res) => {
   const { email, password, rememberMe } = req.body;
 
   try {
-    // Find user (replace with database query)
-    const user = mockUsers.recruiters.find(u => u.email === email);
-    
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'email and password are required' });
     }
 
-    // Verify password (for now, accept any password in development)
-    // In production, use: const isValid = await bcrypt.compare(password, user.password);
-    const isValid = true; // DEVELOPMENT ONLY
+    const normalizedEmail = normalizeEmail(email);
+
+    // Find user (replace with database query)
+    const user = mockUsers.recruiters.find(u => normalizeEmail(u.email) === normalizedEmail);
+    
+    if (!user) {
+      return res.status(401).json({
+        error: `Invalid email or password. Dev recruiter: ${DEV_RECRUITER_EMAIL} / ${DEV_PASSWORD}`,
+      });
+    }
+
+    const isValid = await verifyPassword(password, user.passwordHash);
     
     if (!isValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({
+        error: `Invalid email or password. Dev recruiter: ${DEV_RECRUITER_EMAIL} / ${DEV_PASSWORD}`,
+      });
     }
 
     // Generate JWT token
@@ -52,7 +79,7 @@ router.post('/recruiter/login', async (req, res) => {
         role: 'recruiter',
         name: user.name 
       },
-      process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+      JWT_SECRET,
       { expiresIn: rememberMe ? '30d' : '7d' }
     );
 
@@ -77,18 +104,27 @@ router.post('/candidate/login', async (req, res) => {
   const { email, password, rememberMe } = req.body;
 
   try {
-    // Find user (replace with database query)
-    const user = mockUsers.candidates.find(u => u.email === email);
-    
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'email and password are required' });
     }
 
-    // Verify password (for now, accept any password in development)
-    const isValid = true; // DEVELOPMENT ONLY
+    const normalizedEmail = normalizeEmail(email);
+
+    // Find user (replace with database query)
+    const user = mockUsers.candidates.find(u => normalizeEmail(u.email) === normalizedEmail);
+    
+    if (!user) {
+      return res.status(401).json({
+        error: `Invalid email or password. Dev candidate: ${DEV_CANDIDATE_EMAIL} / ${DEV_PASSWORD}`,
+      });
+    }
+
+    const isValid = await verifyPassword(password, user.passwordHash);
     
     if (!isValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({
+        error: `Invalid email or password. Dev candidate: ${DEV_CANDIDATE_EMAIL} / ${DEV_PASSWORD}`,
+      });
     }
 
     // Generate JWT token
@@ -98,7 +134,7 @@ router.post('/candidate/login', async (req, res) => {
         role: 'candidate',
         name: user.name 
       },
-      process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+      JWT_SECRET,
       { expiresIn: rememberMe ? '30d' : '7d' }
     );
 
@@ -127,7 +163,7 @@ router.get('/verify', (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-production');
+    const decoded = jwt.verify(token, JWT_SECRET);
     res.json({ valid: true, user: decoded });
   } catch (error) {
     res.status(401).json({ error: 'Invalid token' });
