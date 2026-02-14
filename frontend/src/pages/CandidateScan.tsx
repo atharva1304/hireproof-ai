@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { API } from "../lib/api";
 import { getMockCandidate } from "../lib/mockData";
+import { getAuthSession } from "../lib/session";
+import { supabase } from "../lib/supabase";
 import type { Candidate } from "../types/candidate";
 
 const LOADING_STEPS = [
@@ -70,6 +72,8 @@ export default function CandidateScan() {
 
             const candidate: Candidate = await res.json();
             localStorage.setItem("candidate", JSON.stringify(candidate));
+            saveToCandidatesList(candidate);
+            await trySupabaseInsert(candidate, profileUrl.trim());
             navigate(`/candidate/${candidate.id}`);
         } catch (err) {
             console.error("[CandidateScan] API failed:", err);
@@ -77,12 +81,101 @@ export default function CandidateScan() {
 
             const mock = getMockCandidate();
             localStorage.setItem("candidate", JSON.stringify(mock));
+            saveToCandidatesList(mock);
+            await trySupabaseInsert(mock, profileUrl.trim());
 
             setTimeout(() => {
                 navigate(`/candidate/${mock.id}`);
             }, 1500);
         } finally {
             setLoading(false);
+        }
+    };
+
+    /** Append to localStorage candidates array for immediate dashboard use */
+    const saveToCandidatesList = (candidate: Candidate) => {
+        try {
+            const stored = localStorage.getItem("candidates");
+            const list: Candidate[] = stored ? JSON.parse(stored) : [];
+            if (!list.some((c) => c.id === candidate.id)) {
+                list.unshift(candidate);
+            }
+            localStorage.setItem("candidates", JSON.stringify(list));
+        } catch {
+            // ignore
+        }
+    };
+
+    /** Insert into Supabase only if recruiter, never blocks navigation */
+    const trySupabaseInsert = async (candidate: Candidate, githubUrl: string) => {
+        try {
+            // Check role from multiple sources
+            const role =
+                localStorage.getItem("hireproof_role") ||
+                localStorage.getItem("authRole") ||
+                getAuthSession()?.role;
+
+            console.log("[Supabase Insert] Role detected:", role);
+
+            if (role !== "recruiter") {
+                console.log("[Supabase Insert] Skipping — not a recruiter");
+                return;
+            }
+
+            // Get Supabase auth user
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            const user = userData?.user;
+
+            if (userError) {
+                console.error("[Supabase Insert] getUser error:", userError.message);
+            }
+
+            if (!user) {
+                console.error("[Supabase Insert] No Supabase user found — skipping insert");
+                return;
+            }
+
+            console.log("[Supabase Insert] Current user:", user.id);
+
+            // Check for duplicate
+            const { data: existing, error: dupError } = await supabase
+                .from("candidates")
+                .select("id")
+                .eq("report_id", candidate.id)
+                .eq("created_by", user.id)
+                .maybeSingle();
+
+            if (dupError) {
+                console.error("[Supabase Insert] Duplicate check error:", dupError.message);
+            }
+
+            if (existing) {
+                console.log("[Supabase Insert] Candidate already exists, skipping");
+                return;
+            }
+
+            const payload = {
+                name: candidate.name,
+                github_url: githubUrl,
+                score: candidate.score,
+                authenticity_level: candidate.authenticityLevel,
+                report_id: candidate.id,
+                created_by: user.id,
+            };
+
+            console.log("[Supabase Insert] Insert payload:", payload);
+
+            const { error: insertError } = await supabase
+                .from("candidates")
+                .insert(payload);
+
+            if (insertError) {
+                console.error("[Supabase Insert] Insert error:", insertError.message, insertError);
+            } else {
+                console.log("[Supabase Insert] ✅ Candidate inserted successfully!");
+            }
+        } catch (err) {
+            console.error("[Supabase Insert] Exception (non-blocking):", err);
         }
     };
 
@@ -171,13 +264,12 @@ export default function CandidateScan() {
                             {LOADING_STEPS.map((step, i) => (
                                 <div
                                     key={i}
-                                    className={`flex items-center gap-2.5 text-sm transition-all duration-500 ${
-                                        i < loadingStep
-                                            ? "text-green-400"
-                                            : i === loadingStep
-                                              ? "text-purple-300"
-                                              : "text-white/20"
-                                    } ${i > 0 ? "mt-2" : ""}`}
+                                    className={`flex items-center gap-2.5 text-sm transition-all duration-500 ${i < loadingStep
+                                        ? "text-green-400"
+                                        : i === loadingStep
+                                            ? "text-purple-300"
+                                            : "text-white/20"
+                                        } ${i > 0 ? "mt-2" : ""}`}
                                 >
                                     {i < loadingStep ? (
                                         <svg
