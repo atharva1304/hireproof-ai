@@ -200,4 +200,17 @@ router.post("/analyze", async (req: Request, res: Response): Promise<void> => {
     }
 });
 
+router.get("/candidate/:id", (req: Request, res: Response): void => {
+    const { id } = req.params;
+    const candidates = readCandidates();
+    const candidate = candidates.find((c) => c.id === id);
+
+    if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+    }
+
+    res.json(candidate);
+});
+
 export default router;
