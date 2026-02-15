@@ -249,6 +249,60 @@ export default function CandidateReport() {
                     </div>
                 </section>
 
+                <section className="rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl overflow-hidden">
+                    {candidate.resumeAnalysis ? (
+                        <>
+                        <div className="px-6 py-4 border-b border-white/[0.08]">
+                            <h3 className="text-lg font-semibold text-white">Resume Analysis</h3>
+                        </div>
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+                                <p className="text-white/50 text-xs uppercase tracking-wide">ATS Score</p>
+                                <p className="text-2xl text-white font-semibold mt-1">{candidate.resumeAnalysis.atsScore}</p>
+                            </div>
+                            <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+                                <p className="text-white/50 text-xs uppercase tracking-wide">Confidence</p>
+                                <p className="text-2xl text-white font-semibold mt-1">{candidate.resumeAnalysis.confidence}%</p>
+                            </div>
+                            <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+                                <p className="text-white/50 text-xs uppercase tracking-wide">Proficiency</p>
+                                <p className="text-2xl text-white font-semibold mt-1">{candidate.resumeAnalysis.proficiency}</p>
+                            </div>
+                            <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+                                <p className="text-white/50 text-xs uppercase tracking-wide">GitHub Match</p>
+                                <p className="text-2xl text-white font-semibold mt-1">{candidate.resumeAnalysis.githubResumeComparison.matchScore}%</p>
+                            </div>
+                        </div>
+                        <div className="px-6 pb-6">
+                            <table className="w-full text-sm border border-white/[0.08] rounded-xl overflow-hidden">
+                                <thead className="bg-white/[0.03] text-white/60">
+                                    <tr>
+                                        <th className="text-left px-4 py-3 font-medium">Overlap Skills</th>
+                                        <th className="text-left px-4 py-3 font-medium">Resume Only</th>
+                                        <th className="text-left px-4 py-3 font-medium">GitHub Only</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr className="border-t border-white/[0.06]">
+                                        <td className="px-4 py-3 text-white/90">{candidate.resumeAnalysis.githubResumeComparison.overlapSkills.slice(0, 8).join(", ") || "-"}</td>
+                                        <td className="px-4 py-3 text-white/90">{candidate.resumeAnalysis.githubResumeComparison.resumeOnlySkills.slice(0, 8).join(", ") || "-"}</td>
+                                        <td className="px-4 py-3 text-white/90">{candidate.resumeAnalysis.githubResumeComparison.githubOnlySkills.slice(0, 8).join(", ") || "-"}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        </>
+                    ) : (
+                        <div className="px-6 py-5">
+                            <h3 className="text-lg font-semibold text-white mb-2">Resume Analysis</h3>
+                            <p className="text-sm text-white/60">
+                                Resume evaluation is not available for this report. Re-run scan and paste resume text in
+                                the `Resume Text` field (file upload alone is not parsed yet).
+                            </p>
+                        </div>
+                    )}
+                </section>
+
                 {/* 7. Strengths & Weaknesses */}
                 <StrengthWeakness
                     strengths={candidate.strengths}

@@ -23,6 +23,19 @@ export interface GitHubMonitoring {
     monitorSummary: string[];
 }
 
+export interface ResumeAnalysis {
+    atsScore: number;
+    confidence: number;
+    proficiency: "Beginner" | "Intermediate" | "Advanced";
+    githubResumeComparison: {
+        overlapSkills: string[];
+        resumeOnlySkills: string[];
+        githubOnlySkills: string[];
+        matchScore: number;
+    };
+    summary: string[];
+}
+
 export interface Candidate {
     id: string;
     name: string;
@@ -42,4 +55,5 @@ export interface Candidate {
     contributionDepth?: number;
     commitTimeline?: CommitPoint[];
     githubMonitoring?: GitHubMonitoring;
+    resumeAnalysis?: ResumeAnalysis;
 }
