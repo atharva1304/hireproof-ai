@@ -67,9 +67,9 @@ export default function Profile() {
         .from('profiles')
         .select('*')
         .eq('email', session.user.email)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      if (error) {
         console.error('Error loading profile:', error);
         return;
       }

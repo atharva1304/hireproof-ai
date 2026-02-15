@@ -2,22 +2,12 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/layout/Sidebar";
 import { getAuthSession } from "../lib/session";
-import { supabase } from "../lib/supabase";
-
-interface DashboardCandidate {
-    id: string;
-    name: string;
-    github_url: string;
-    score: number;
-    authenticity_level: string;
-    report_id: string;
-    created_by: string;
-    created_at: string;
-}
+import { API } from "../lib/api";
+import type { Candidate } from "../types/candidate";
 
 export default function Dashboard() {
     const navigate = useNavigate();
-    const [candidates, setCandidates] = useState<DashboardCandidate[]>([]);
+    const [candidates, setCandidates] = useState<Candidate[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const session = getAuthSession();
@@ -33,14 +23,10 @@ export default function Dashboard() {
         async function loadCandidates() {
             setLoading(true);
             setError(null);
-
             try {
-                // Get current Supabase user
-                const { data: userData, error: userError } = await supabase.auth.getUser();
-                const user = userData?.user;
-
-                if (userError) {
-                    console.error("[Dashboard] getUser error:", userError.message);
+                const res = await fetch(`${API}/api/candidates`);
+                if (!res.ok) {
+                    throw new Error(`Failed to load candidates (${res.status})`);
                 }
 
                 if (!user?.id) {
@@ -63,7 +49,7 @@ export default function Dashboard() {
                 }
 
                 if (!cancelled) {
-                    setCandidates((data as DashboardCandidate[]) ?? []);
+                    setCandidates(Array.isArray(data) ? data : []);
                 }
             } catch (err) {
                 if (!cancelled) {

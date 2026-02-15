@@ -5,10 +5,11 @@ import { generateId } from "../utils/id";
 import { analyzeUrl } from "../services/urlAnalyzerService";
 import type { CandidateReport, Skills } from "../types";
 import { generateGithubAutomationInsights, generateInsights } from "../services/aiService";
-import { fetchGithubData } from "../services/githubService";
+import { fetchGithubData, type GithubData } from "../services/githubService";
 import { calculateScore } from "../services/scoringService";
 import { detectRisks } from "../services/riskAnalyzer";
 import { supabase } from "../lib/supabaseClient";
+import { analyzeResumeVsGithub } from "../services/resumeAnalyzer";
 
 const router = Router();
 const DB_PATH = path.join(__dirname, "..", "data", "candidates.json");
@@ -16,6 +17,7 @@ const DB_PATH = path.join(__dirname, "..", "data", "candidates.json");
 type AnalyzeRequestBody = {
     url?: string;
     githubUrl?: string;
+    resumeText?: string;
 };
 
 function readCandidates(): CandidateReport[] {
@@ -81,7 +83,7 @@ function extractGithubUsername(input: string): string | null {
    ══════════════════════════════════════════ */
 router.post("/analyze", async (req: Request, res: Response): Promise<void> => {
     try {
-        const { url, githubUrl } = req.body as AnalyzeRequestBody;
+        const { url, githubUrl, resumeText } = req.body as AnalyzeRequestBody;
         const analysisUrl = url ?? githubUrl;
 
         if (!analysisUrl || typeof analysisUrl !== "string") {
@@ -106,8 +108,10 @@ router.post("/analyze", async (req: Request, res: Response): Promise<void> => {
 
         // GitHub monitoring automation (adds richer signal + actionable suggestions).
         const githubUsername = extractGithubUsername(analysisUrl);
+        let githubDataForResume: GithubData | undefined;
         if (githubUsername) {
             const githubData = await fetchGithubData(githubUsername);
+            githubDataForResume = githubData;
 
             const githubSignals = {
                 repoCount: githubData.repoCount,
@@ -174,6 +178,15 @@ router.post("/analyze", async (req: Request, res: Response): Promise<void> => {
             };
         }
 
+        const resumeAnalysis = analyzeResumeVsGithub({
+            resumeText,
+            githubData: githubDataForResume,
+            skills: report.skills,
+        });
+        if (resumeAnalysis) {
+            report.resumeAnalysis = resumeAnalysis;
+        }
+
         // INTEGRATION: Gemini AI Insights
         try {
             const ai = await generateInsights({
@@ -198,6 +211,7 @@ router.post("/analyze", async (req: Request, res: Response): Promise<void> => {
         saveCandidates(candidates);
 
         // ── Save to Supabase ──
+        if (supabase) {
         try {
             const topSkills = (Object.entries(report.skills) as [string, number][])
                 .sort((a, b) => b[1] - a[1])
@@ -231,6 +245,7 @@ router.post("/analyze", async (req: Request, res: Response): Promise<void> => {
             console.error("[analyze] Supabase insert error:", sbErr);
             // Non-fatal — JSON file is the fallback
         }
+        }
 
         res.json(report);
     } catch (error) {
@@ -246,19 +261,21 @@ router.get("/candidate/:id", async (req: Request, res: Response): Promise<void> 
     const { id } = req.params;
 
     // Try Supabase first
-    try {
-        const { data, error } = await supabase
-            .from("candidates")
-            .select("report_data")
-            .or(`report_id.eq.${id},id.eq.${id}`)
-            .single();
+    if (supabase) {
+        try {
+            const { data, error } = await supabase
+                .from("candidates")
+                .select("report_data")
+                .or(`report_id.eq.${id},id.eq.${id}`)
+                .single();
 
-        if (!error && data?.report_data) {
-            res.json(data.report_data);
-            return;
+            if (!error && data?.report_data) {
+                res.json(data.report_data);
+                return;
+            }
+        } catch {
+            // Fall through to JSON file
         }
-    } catch {
-        // Fall through to JSON file
     }
 
     // Fallback: JSON file
@@ -278,18 +295,23 @@ router.get("/candidate/:id", async (req: Request, res: Response): Promise<void> 
    ══════════════════════════════════════════ */
 router.get("/candidates", async (_req: Request, res: Response): Promise<void> => {
     // Try Supabase first
-    try {
-        const { data, error } = await supabase
-            .from("candidates")
-            .select("*")
-            .order("created_at", { ascending: false });
+    if (supabase) {
+        try {
+            const { data, error } = await supabase
+                .from("candidates")
+                .select("report_data")
+                .order("created_at", { ascending: false });
 
-        if (!error && data && data.length > 0) {
-            res.json(data);
-            return;
+            if (!error && data && data.length > 0) {
+                const reports = data.map((row) => row.report_data).filter(Boolean);
+                if (reports.length > 0) {
+                    res.json(reports);
+                    return;
+                }
+            }
+        } catch {
+            // Fall through to JSON file
         }
-    } catch {
-        // Fall through to JSON file
     }
 
     // Fallback: JSON file

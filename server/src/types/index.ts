@@ -49,4 +49,16 @@ export interface CandidateReport {
         automation: string[];
         monitorSummary: string[];
     };
+    resumeAnalysis?: {
+        atsScore: number;
+        confidence: number;
+        proficiency: "Beginner" | "Intermediate" | "Advanced";
+        githubResumeComparison: {
+            overlapSkills: string[];
+            resumeOnlySkills: string[];
+            githubOnlySkills: string[];
+            matchScore: number;
+        };
+        summary: string[];
+    };
 }

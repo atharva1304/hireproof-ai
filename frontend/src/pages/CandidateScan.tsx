@@ -15,6 +15,8 @@ const LOADING_STEPS = [
 export default function CandidateScan() {
     const navigate = useNavigate();
     const [profileUrl, setProfileUrl] = useState("");
+    const [resumeText, setResumeText] = useState("");
+    const [resumeFileName, setResumeFileName] = useState("");
     const [loading, setLoading] = useState(false);
     const [loadingStep, setLoadingStep] = useState(0);
     const [error, setError] = useState("");
@@ -65,7 +67,7 @@ export default function CandidateScan() {
             const res = await fetch(`${API}/analyze`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ url: profileUrl.trim() }),
+                body: JSON.stringify({ url: profileUrl.trim(), resumeText: resumeText.trim() }),
             });
 
             if (!res.ok) throw new Error("API returned error");
@@ -90,6 +92,28 @@ export default function CandidateScan() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleResumeFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setResumeFileName(file.name);
+        const lower = file.name.toLowerCase();
+
+        // Browser-native parsing without extra libs: support text-like files only.
+        if (lower.endsWith(".txt") || lower.endsWith(".md")) {
+            try {
+                const text = await file.text();
+                setResumeText(text);
+                setError("");
+            } catch {
+                setError("Could not read resume file. Paste resume text manually.");
+            }
+            return;
+        }
+
+        setError("File upload is selected, but parsing is supported only for .txt/.md right now. Paste resume text for ATS analysis.");
     };
 
     /** Append to localStorage candidates array for immediate dashboard use */
@@ -228,16 +252,34 @@ export default function CandidateScan() {
 
                     <div className="mb-6">
                         <label className="block text-white/50 text-xs font-medium uppercase tracking-wider mb-2">
-                            Resume Upload <span className="text-white/25 normal-case">(optional)</span>
+                            Resume Upload <span className="text-white/25 normal-case">(optional UI only)</span>
                         </label>
                         <div className="relative">
                             <input
                                 type="file"
-                                accept=".pdf,.doc,.docx"
+                                accept=".txt,.md,.pdf,.doc,.docx"
+                                onChange={handleResumeFileChange}
                                 disabled={loading}
                                 className="w-full py-2.5 px-4 bg-white/[0.05] border border-white/[0.1] border-dashed rounded-xl text-white/40 text-sm file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-white/10 file:text-white/60 hover:file:bg-white/15 file:cursor-pointer cursor-pointer transition-all disabled:opacity-50"
                             />
                         </div>
+                        {resumeFileName ? (
+                            <p className="text-white/35 text-xs mt-2">Selected file: {resumeFileName}</p>
+                        ) : null}
+                    </div>
+
+                    <div className="mb-6">
+                        <label className="block text-white/50 text-xs font-medium uppercase tracking-wider mb-2">
+                            Resume Text <span className="text-white/25 normal-case">(for ATS + comparison)</span>
+                        </label>
+                        <textarea
+                            value={resumeText}
+                            onChange={(e) => setResumeText(e.target.value)}
+                            placeholder="Paste resume summary/experience here..."
+                            disabled={loading}
+                            rows={5}
+                            className="w-full px-4 py-3 bg-white/[0.05] border border-white/[0.1] rounded-xl text-white placeholder-white/25 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all disabled:opacity-50 resize-y"
+                        />
                     </div>
 
                     {error && (
